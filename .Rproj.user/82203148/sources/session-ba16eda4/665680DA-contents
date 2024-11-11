@@ -1,0 +1,1095 @@
+options(digits = 3)    # report 3 significant digits
+library(hrbrthemes)
+library(ggplot2)
+library(viridis)
+library(ggrepel)
+library("ggpattern")    
+
+##########################################
+#         EXPLORATORY ANALISYS
+##########################################
+#carrega o dataset
+dataset <- read.csv("data/dataset.csv", sep = ",")
+dataset <- dataset %>% dplyr::select(-X)
+
+#########################################################
+#IDADE INGRESSO CURSO
+#########################################################
+
+boxplot(aux$idade_ingresso_curso)
+hist(aux$idade_ingresso_curso)
+
+boxplot(aux$nota_entrada)
+hist(tmp$tempo_ensino_medio_e_ingresso)
+quantile(dataset$tempo_ensino_medio_e_ingresso)
+
+count(dataset$tempo_ensino_medio_e_ingresso[dataset$tempo_ensino_medio_e_ingresso < 0])
+
+#########################################################
+#DADOS DE INGRESSO
+df <- dataset
+dim(df)
+
+df %>%
+  ggplot(aes(ordem_classificacao_processo_seletivo, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2) +
+  facet_grid(situacao ~ .)
+
+df %>% 
+  ggplot(aes(x = scale(nota_entrada), group=situacao, fill=situacao)) + 
+  geom_density(adjust=1.5, alpha = 0.2) + 
+  scale_x_continuous(trans="log2") +
+  facet_grid(situacao ~ .)
+
+df %>%
+  filter(periodo_atual > 0) %>%
+  ggplot(aes(x = situacao, y = scale(nota_entrada))) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+
+ggplot(subset(diamonds, carat > 1), aes(cut, clarity)) +
+  geom_jitter())
+
+
+df %>%
+  ggplot(aes(x = situacao, y = idade_ingresso_curso)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+df %>%
+  filter(idade_ingresso_curso < 100 & idade_ingresso_curso > 15) %>%
+  ggplot(aes(x = idade_ingresso_curso)) +
+  geom_histogram(binwidth=1) + 
+  facet_grid(situacao ~ .)
+
+table(df$situacao, df$is_primeira_opcao_curso)
+table(df$situacao, df$egresso_escola_publica)
+table(df$situacao, df$baixa_renda_familiar)
+
+df %>%
+  ggplot(aes(x = situacao, y = total_disc_aprovadas)) +
+  geom_boxplot() +
+  labs(title="Situacao x Total disciplinas aprovadas",x="",y="") +
+  #geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+df %>%
+  ggplot(aes(x = situacao, y = carga_horaria_insucesso_primeiro_semestre)) +
+  geom_boxplot() +
+  labs(title="Situacao x Carga horária insucesso 1º semestre",x="",y="") +
+  #geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+df %>%
+  ggplot(aes(x = situacao, y = mc)) +
+  geom_boxplot() +
+  labs(title="Situacao x Índice de rendimento acadêmico",x="",y="") +
+  #geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+df %>%
+  ggplot(aes(x = situacao, y = media_notas)) +
+  geom_boxplot() + 
+  labs(title="Situacao x Média notas",x="",y="")
+  #geom_jitter(alpha = 0.2) + 
+  #scale_y_continuous(trans="log2")
+
+df %>%
+  ggplot(aes(x = situacao, y = periodo_atual)) +
+  geom_boxplot()+
+  labs(title="Situacao x Período atual do estudante",x="",y="")
+#geom_jitter(alpha = 0.2) + 
+#scale_y_continuous(trans="log2")
+
+df %>%
+  ggplot(aes(x = situacao, y = total_faltas_primeiro_semestre)) +
+  geom_boxplot() +
+  labs(title="Situacao x Carga horária integralizada",x="",y="") +
+  #geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+df %>%
+  ggplot(aes(cota, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2) +
+  facet_grid(situacao ~ .)
+
+df %>%
+  filter(tempo_ensino_medio_e_ingresso < 100 & tempo_ensino_medio_e_ingresso > 0) %>%
+  ggplot(aes(x = situacao, y = tempo_ensino_medio_e_ingresso)) +
+  geom_boxplot()
+
+df %>%
+  ggplot(aes(x = estrangeiro, fill=situacao)) +
+  geom_bar()
+
+df %>%
+  ggplot(aes(x = turno, fill=situacao)) +
+  geom_bar()
+
+df %>%
+  ggplot(aes(x = situacao, fill=turno)) +
+  geom_bar()
+
+df %>%
+  ggplot(aes(x = situacao, fill=raca)) +
+  geom_bar()
+
+df %>%
+  ggplot(aes(x = situacao, fill=area_curso)) +
+  geom_bar()
+
+df %>%
+  ggplot(aes(x = area_curso)) +
+  geom_bar() +
+  facet_grid(situacao ~ .)
+
+aux <- df %>% group_by(area_curso, situacao) %>% summarise(n = n())
+
+aux <- pivot_wider(aux, id_cols = c("area_curso"), names_from = "situacao", values_from = "n")
+aux <- aux %>% 
+  mutate(TOTAL = ATIVO+ CANCELADO + CONCLUIDO + TRANCADO) %>%
+  mutate(cancelado = round(100 * CANCELADO / TOTAL, digits = 2)) %>%
+  mutate(trancado = round(100 * TRANCADO / TOTAL, digits = 2)) %>%
+  mutate(ativo = round(100 * ATIVO / TOTAL, digits = 2)) %>%
+  mutate(concluido = round(100 * CONCLUIDO / TOTAL, digits = 2)) %>%
+  mutate(total = round(ativo+cancelado+concluido+trancado,digits=0))
+
+aux <- aux %>% 
+  mutate(sucesso = ativo + concluido) %>%
+  mutate(insucesso = cancelado + trancado) 
+
+aux <- aux %>% select(area_curso, insucesso, sucesso, total) 
+aux$area_curso[aux$area_curso == "MULTIDISCIPLINAR"] <- "Multidisciplinar"
+#aux <- pivot_longer(aux, cols = insucesso:sucesso, values_to = c("proporcao"), names_to="situacao")
+
+#aux$situacao <- factor(aux$situacao, levels=c("concluido","ativo","trancado","cancelado","total"))
+
+# geral
+aux %>%
+  ggplot() + coord_flip() +
+  geom_bar(aes(x=reorder(area_curso, insucesso), y=total), fill="grey80", stat="identity") + 
+  geom_bar(aes(x=reorder(area_curso, insucesso), y=insucesso),fill="orange", stat="identity") +
+  geom_hline(yintercept = mean(aux$insucesso), linetype = "dashed", size = 1) +
+  geom_text(aes(x=reorder(area_curso, insucesso), y=insucesso, label=(paste(insucesso,"%"))), size = 3, position = position_stack(vjust = 0.5))+
+  labs(title="",x="",y="Percentual de insucessos (cancelados + trancados)") +
+  theme(axis.line = element_line(linewidth = 1, colour = "grey80"),
+        axis.text.x = element_text(angle=90, hjust=1),
+        plot.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.grid.minor.y = element_line(color="grey80"),
+        legend.text = element_text(size = 10),
+        legend.position = c(0.5, -0.1), legend.box = "horizontal")
+
+
+#SEPARAR TRANCADO DE CANCELADO
+aux <- df %>% group_by(area_curso, situacao) %>% summarise(n = n())
+aux2 <- aux %>% group_by(area_curso) %>% summarise(total=sum(n))
+aux <- dplyr::left_join(aux, aux2, by="area_curso")
+aux <- aux %>% mutate(proporcao = round(100*(n/total), digits=2))
+
+aux$situacao <- factor(aux$situacao, levels=c("CONCLUIDO","ATIVO","TRANCADO","CANCELADO"))
+aux3 <- aux %>% filter(situacao %in% c("TRANCADO","CANCELADO")) %>% summarise(total_insucessos = sum(n)) %>% select(area_curso, total_insucessos)
+aux <- dplyr::left_join(aux, aux3, by="area_curso")
+aux <- aux %>% mutate(proporcao_insucesso = round(100 * total_insucessos / total, digits = 2))
+
+#OPÇÃO EMPILHADA
+aux %>%
+  ggplot(aes(x=reorder(area_curso, proporcao_insucesso), y=proporcao, fill=situacao )) + coord_flip() +
+  geom_bar(stat="identity") +
+  scale_fill_manual(values = c("#3db5ff", "#0099f9", "grey80", "red")) +
+  #geom_hline(yintercept = mean(aux$insucesso), linetype = "dashed", size = 1) +
+  geom_text(aes(x=reorder(area_curso, proporcao_insucesso), y=proporcao, label=(paste(proporcao,"%"))), size = 3, position = position_stack(vjust = 0.5))+
+  labs(title="",x="",y="Percentual de insucessos (cancelados + trancados)") +
+  theme(axis.line = element_line(linewidth = 1, colour = "grey80"),
+        axis.text.x = element_text(angle=90, hjust=1),
+        plot.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.grid.minor.y = element_line(color="grey80"),
+        legend.text = element_text(size = 10))
+
+#OPÇÃO SOMENTE INSUCESSOS
+aux <- df %>% group_by(area_curso, situacao) %>% summarise(n = n())
+aux2 <- aux %>% group_by(area_curso) %>% summarise(total=sum(n))
+aux <- dplyr::left_join(aux, aux2, by="area_curso")
+aux <- aux %>% mutate(proporcao = round(100*(n/total), digits=2)) %>% filter(situacao %in% c("TRANCADO","CANCELADO"))
+aux <- pivot_wider(aux, id_cols = c("area_curso"), names_from = "situacao", values_from = "proporcao")
+
+aux %>%
+  ggplot() + coord_flip() +
+  geom_bar(aes(x=reorder(area_curso, (CANCELADO+TRANCADO)), y=100), fill="white", stat="identity") + 
+  geom_bar(aes(x=reorder(area_curso, (CANCELADO+TRANCADO)), y=(CANCELADO+TRANCADO), fill="Trancados"), stat="identity") +
+  geom_bar(aes(x=reorder(area_curso, (CANCELADO+TRANCADO)), y=CANCELADO, fill="Cancelados"), stat="identity") +
+  geom_text(aes(x=reorder(area_curso, (CANCELADO+TRANCADO)), y=(CANCELADO+TRANCADO), label=(TRANCADO)), size = 3.2, position = position_stack(vjust = 0.90))+
+  geom_text(aes(x=reorder(area_curso, (CANCELADO+TRANCADO)), y=100, label=(paste("(",CANCELADO + TRANCADO,"%)"))), size = 3.4, position = position_stack(vjust = 0.95))+
+  scale_fill_manual(name = NULL, values = c("Cancelados" = "orange3", "Trancados" = "orange")) +
+  geom_text(aes(x=reorder(area_curso, (CANCELADO+TRANCADO)), y=(CANCELADO), label=(CANCELADO)), size = 3.2, position = position_stack(vjust = 0.75))+
+  labs(title="",x="",y="Percentual de insucessos") +
+  theme(axis.line = element_line(linewidth = 1, colour = "grey80"),
+        axis.text.x = element_text(angle=90, hjust=1),
+        plot.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.grid.minor.y = element_line(color="grey80"),
+        legend.position = c(0.12, -0.09), legend.direction = "horizontal",
+        legend.text = element_text(size = 10))
+
+table(dataset$apr_inf_66_porc)
+
+#########################################################
+#SITUAÇÃO E PERÍODO ATUAL
+#nesse caso, pegar dados gerais 
+df <- dataset 
+dim(df)
+
+table(dataset$curso, dataset$situacao)
+
+df %>% 
+  ggplot(aes(x = periodo_atual, group=situacao, fill=situacao)) + 
+  geom_histogram(binwidth = 1)
+
+df %>%
+  ggplot(aes(periodo_atual, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2) +
+  scale_x_continuous(breaks=c(0,2,4,6,8,10,12,14,16,18,20,22,24,26,28)) +
+  facet_grid( ~ situacao)
+
+df %>%
+  ggplot(aes(periodo_atual, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2, position = "stack") +
+  scale_x_continuous(breaks=c(0,2,4,6,8,10,12,14,16,18,20,22,24,26,28))
+
+df %>%
+  ggplot(aes(periodo_atual, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2) +
+  scale_x_continuous(breaks=c(0,2,4,6,8,10,12,14,16,18,20,22,24,26,28))
+  
+table(df$situacao)
+
+#########################################################
+#ABANDONOS POR CURSO
+#nesse caso, pegar dados gerais 
+df <- read.csv("data/dataset.csv", sep = ",")
+df <- df %>% filter(curso != "LETRAS - ARTES E MEDIAÇÃO CULTURAL")
+dim(df)
+
+table(dataset$situacao)
+nrow(dataset[dataset$situacao == 'TRANCADO',]) / nrow(dataset)
+nrow(dataset[dataset$situacao == 'CANCELADO',]) / nrow(dataset)
+nrow(dataset[dataset$situacao == 'ATIVO',]) / nrow(dataset)
+nrow(dataset[dataset$situacao == 'CONCLUIDO',]) / nrow(dataset)
+
+df$situacao <- apply(df,1,function(row){ 
+  if( !is.na(match(row['situacao'], c("CANCELADO", "TRANCADO"))) ){
+    return(as.factor("insucesso"))
+  }
+  return(as.factor("sucesso"))
+})
+
+table(df$curso, df$situacao)
+
+df <- df %>% select(curso, situacao) %>% group_by(curso, situacao) %>% count()
+
+df2 <- pivot_wider(df, id_cols = c("curso"), names_from = "situacao", values_from = "freq")
+df2 <- df2 %>% 
+  mutate(proporcao_insucesso = round(100 * insucesso / (insucesso + sucesso),digits=0)) %>%
+  mutate(proporcao_sucesso = round(100 * sucesso / (insucesso + sucesso),digits=0)) %>%
+  mutate(total = proporcao_sucesso + proporcao_insucesso)
+
+mean(df2$proporcao_insucesso)
+
+df %>% ggplot(aes(x = curso, y = freq, fill = situacao)) +
+  geom_bar(stat = "identity")+
+  coord_flip()+
+  labs(title="",x="",y="Qtde alunos") +
+  scale_fill_manual(name = "Situação", values = c("grey80", "#8AAAE5"))+
+  theme(
+    axis.line = element_line(linewidth = 1, colour = "grey80"),
+    axis.text.x = element_text(angle=90, hjust=1),
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    legend.text = element_text(size = 10)
+  )
+
+p1 <- df2 %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(curso, -proporcao_insucesso), y=total), stat="identity", alpha=0.8, fill = "grey80") +
+  #geom_text(aes(x=curso, y=total, label=(paste(proporcao_sucesso,"%"))), size = 3, position = position_stack(vjust = 0.97)) +
+  geom_bar(aes(x=reorder(curso, proporcao_insucesso), y=proporcao_insucesso), stat="identity", alpha=0.8, fill = "orange") +
+  geom_text(aes(x=curso, y=proporcao_insucesso, label=(paste(proporcao_insucesso, '%'))), size = 3, position = position_stack(vjust = 0.95)) +
+  labs(title="",x="",y="Percentual de insucesso") +
+  geom_hline(yintercept = mean(df2$proporcao_insucesso), linetype = "dashed", size = 0.2) +
+  theme(axis.line = element_line(linewidth = 1, colour = "grey80"),
+        axis.text.x = element_text(angle=90, hjust=1),
+        plot.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.grid.minor.y = element_line(color="grey80"),
+        legend.text = element_text(size = 10),
+        legend.position = c(0.5, -0.1), legend.box = "horizontal")
+
+p2 <- ggplot(df2, aes(y=proporcao_insucesso)) + 
+  geom_boxplot() +
+  ylab("") + 
+  geom_boxplot(alpha = 0.8,          # Fill transparency
+               colour = "#474747",   # Border color
+               outlier.colour = 1) +  # Outlier color
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    legend.text = element_text(size = 10), legend.position = "none")
+
+plot_grid(p1,p2, rel_widths = c(6,1))
+
+df2 %>% summarise(m=mean(proporcao_insucesso))
+
+# max_first  <- max(df2$total)   # Specify max of first y axis
+# max_second <- max(df2$proporcao_insucesso) # Specify max of second y axis
+# min_first  <- min(0)   # Specify min of first y axis
+# min_second <- min(0) # Specify min of second y axis
+# 
+# # scale and shift variables calculated based on desired mins and maxes
+# scale = (max_second - min_second)/(max_first - min_first)
+# shift = min_first - min_second
+# 
+# # Function to scale secondary axis
+# scale_function <- function(x, scale, shift){
+#   return ((x)*scale - shift)
+# }
+# 
+# # Function to scale secondary variable values
+# inv_scale_function <- function(x, scale, shift){
+#   a <- ((x + shift)/scale)
+#   return(round(a,digits = 2))
+# }
+
+# ggplot(df2, aes(x = curso, y = total)) +
+#   geom_bar(aes(x=curso, y=total, fill = "Insucesso"), stat="identity", fill="grey80")+
+#   geom_bar(aes(x=curso, y=Sucesso, color = "Sucesso"), stat="identity", fill="#8AAAE5")+
+#   #geom_line(aes(y = inv_scale_function(proporcao_insucesso, scale, shift), color = "Proporção Insucesso"), group=1) +
+#   #geom_label_repel(aes(y = inv_scale_function(proporcao_insucesso, scale, shift), label=paste(round(proporcao_insucesso*100,digits=0),'%'), color="Proporção Insucesso"))+  
+#   scale_y_continuous(limits = c(min_first, max_first), sec.axis = sec_axis(~scale_function(., scale, shift), name="% Insucesso")) +
+#   scale_fill_manual(name = NULL, values = c("Insucesso" = "grey80", "Sucesso" = "#8AAAE5"))+
+#   scale_color_manual(name = NULL, values = c("Proporção Insucesso" = "red", "Sucesso" = "#8AAAE5"))+
+#   labs(title="",x="",y="Alunos") +
+#   theme(
+#     axis.line = element_line(linewidth = 1, colour = "grey80"),
+#     axis.text.x = element_text(angle=90, hjust=1),
+#     plot.background = element_rect(fill="white"),
+#     panel.background = element_rect(fill="white"),
+#     panel.grid.minor.y = element_line(color="grey80"),
+#     legend.text = element_text(size = 10)
+#   )
+
+#########################################################
+#DESEMPENHO
+df <- dataset %>% dplyr::filter(situacao %in% c("CANCELADO", "CONCLUIDO", "ATIVO", "TRANCADO"))
+
+df %>%
+  ggplot(aes(ira, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2) + 
+  facet_grid(situacao ~ .)
+
+df %>%
+  ggplot(aes(ispl, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2) + 
+  facet_grid(situacao ~ .)
+
+df %>%
+  ggplot(aes(media_notas, fill = situacao)) +
+  geom_density(adjust=1.5, alpha = 0.2) +
+  facet_grid(situacao ~ .)
+  
+#########################################################
+#CARGA HORÁRIA
+df %>% 
+  ggplot(aes(x = carga_horaria_sucesso, group=situacao, fill=situacao)) + 
+  geom_density(adjust=1.5, alpha = 0.2) + 
+  scale_x_continuous(trans="log2") 
+
+df %>% 
+  ggplot(aes(x = carga_horaria_insucesso, group=situacao, fill=situacao)) + 
+  geom_density(adjust=1.5, alpha = 0.2) + 
+  scale_x_continuous(trans="log2") +
+  facet_grid(situacao ~ .)
+
+df %>% 
+  ggplot(aes(x = total_faltas_primeiro_semestre, y=after_stat(count), group=situacao, fill=situacao)) + 
+  geom_density(adjust=1.5, alpha = 0.2) + 
+  scale_x_continuous(trans="log2") +
+  facet_grid(situacao ~ .)
+
+df %>%
+  ggplot(aes(x = situacao, y = carga_horaria_sucesso)) +
+  geom_boxplot() +
+  #geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+
+
+
+#########################################################
+#FORMA INGRESSO
+df <- dataset %>% dplyr::filter(situacao %in% c("CANCELADO", "CONCLUIDO", "ATIVO", "TRANCADO"))
+dim(df)
+
+df %>%
+  ggplot(aes(ira, fill = forma_ingresso)) +
+  geom_density(adjust=1.5, alpha = 0.2) + 
+  facet_grid(situacao ~ .)
+
+#inclusive entre alunos que fazem reopção o abandono é alto
+a <- df %>% filter(forma_ingresso == "REOPCAO")
+sum(table())
+count(a[a$situacao=="ABANDONO","situacao"])
+
+#########################################################
+
+
+
+tmp %>% 
+  ggplot(aes(x = periodo_atual, group=situacao, fill=situacao)) + 
+  geom_density(adjust=1.5, alpha=.4) +
+  theme_ipsum() +
+  facet_wrap(~situacao) +
+  theme(
+    legend.position="none",
+    panel.spacing = unit(0.1, "lines"),
+    axis.ticks.x=element_blank()
+  )
+
+descritiva2("situacao", "carga_horaria_sucesso", tmp)
+descritiva2("situacao", "carga_horaria_insucesso", tmp)
+descritiva2("situacao", "total_faltas_primeiro_semestre", tmp)
+descritiva2("situacao", "periodo_atual", df)
+descritiva2("situacao", "ira", tmp)
+descritiva2("situacao", "ordem_classificacao_processo_seletivo", tmp)
+descritiva2("situacao", "total_projetos", tmp)
+descritiva2("situacao", "total_atendimentos", tmp)
+descritiva2("situacao", "atendimento_psicologico", tmp)
+descritiva2("situacao", "atendimento_medico", tmp)
+descritiva2("situacao", "beneficios_assistencia", tmp)
+descritiva2("situacao", "aux_alimentacao", tmp)
+descritiva2("situacao", "aux_financeiro_alimentacao", tmp)
+descritiva2("situacao", "aux_transporte", tmp)
+descritiva2("situacao", "idade_ingresso_curso", tmp)
+
+dataset %>% 
+  ggplot(aes(x = idade_ingresso_curso, group=situacao, fill=situacao)) + 
+  geom_density(adjust=0.2, alpha=.4) +
+  theme_ipsum()
+
+dataset %>% dplyr::group_by(situacao) %>%
+  summarise(mean(media_notas, na.rm = TRUE))
+
+
+#####################################
+
+
+
+
+
+
+
+
+#Raca
+tmp %>%
+  filter(tempo_ensino_medio_e_ingresso < 100) %>%
+  ggplot(aes(x = tempo_ensino_medio_e_ingresso, y = after_stat(count), fill = raca)) +
+  #geom_density(aes(color=raca),alpha=0.2) + 
+  #geom_density(alpha = 0.2, position = "stack")
+  geom_density(alpha = 0.2) +
+  facet_grid(raca ~ .)
+
+tmp %>%
+  filter(idade_ingresso_curso < 100) %>%
+  ggplot(aes(x = idade_ingresso_curso, y = after_stat(count), fill = raca)) +
+  #geom_density(aes(color=raca),alpha=0.2) + 
+  #geom_density(alpha = 0.2, position = "stack")
+  geom_density(alpha = 0.2) +
+  facet_grid(raca ~ .)
+
+tmp %>%
+  ggplot(aes(x = situacao, y = after_stat(count), fill = raca)) +
+  #geom_density(aes(color=raca),alpha=0.2) + 
+  #geom_density(alpha = 0.2, position = "stack")
+  geom_bar(position = "stack")
+
+
+tmp %>%
+  ggplot(aes(x = atendimento_psicologico, y = after_stat(count), fill = raca)) +
+  #geom_density(aes(color=raca),alpha=0.2) + 
+  #geom_density(alpha = 0.2, position = "stack")
+  geom_density(alpha = 0.2) +
+  facet_grid(raca ~ .)
+
+tmp %>%
+  ggplot(aes(x = media_notas, y = after_stat(count), fill = forma_ingresso)) +
+  geom_density(aes(color=forma_ingresso),alpha=0.2) +
+  scale_x_continuous(trans="log2")
+  #geom_density(alpha = 0.2, position = "stack")
+  #geom_density(alpha = 0.2) +
+  #facet_grid(raca ~ .)
+
+tmp %>%
+  ggplot(aes(x = situacao, y = after_stat(count), fill = forma_ingresso)) +
+  geom_bar() +
+  facet_grid(~forma_ingresso)
+
+
+
+
+tmp %>%
+  ggplot(aes(x = media_notas, y = after_stat(count), fill = raca)) +
+  geom_density(aes(color=raca),alpha=0.2) +
+  scale_x_continuous(trans="log")
+#geom_density(alpha = 0.2, position = "stack")
+#geom_density(alpha = 0.2) +
+#facet_grid(raca ~ .)
+
+
+#estrangeiro
+tmp %>%
+  ggplot(aes(x = numero_faltas, y = after_stat(count), fill = estrangeiro)) +
+  #geom_density(aes(color=raca),alpha=0.2) + 
+  #geom_density(alpha = 0.2, position = "stack")
+  geom_density(alpha = 0.2) +
+  facet_grid(estrangeiro ~ .)
+
+#################################3
+#periodo atual
+df %>%
+  ggplot(aes(x = situacao, y = periodo_atual)) +
+  geom_boxplot() +
+  #geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+tmp %>%
+  ggplot(aes(x = periodo_atual, fill = situacao)) +
+  geom_density(aes(color=situacao),alpha=0.2) +
+  #geom_density(alpha = 0.2, position = "stack")
+  #geom_density(alpha = 0.2) +
+  facet_grid(situacao ~ .)
+
+tmp %>%
+  ggplot(aes(x = periodo_atual, fill=situacao)) +
+  #geom_bar(position="stack")
+  geom_density(alpha=0.2) +
+  scale_x_continuous(trans="log2") +
+  facet_grid(situacao ~ .)
+
+#####################################
+#media notas x situacao
+tmp %>%
+  ggplot(aes(x = ch_total_integralizada, y = after_stat(count), fill = situacao)) +
+  geom_density(aes(color=situacao),alpha=0.2)
+  #geom_density(alpha = 0.2, position = "stack")
+  #geom_density(alpha = 0.2)
+
+
+
+########################
+
+#Situacao x Raca
+tmp %>%
+  ggplot(aes(x = estrangeiro, fill=estrangeiro)) +
+  #geom_bar(position="stack")
+  geom_bar(position=position_dodge())
+
+
+
+#Situacao x Raca
+tmp %>%
+  ggplot(aes(x = situacao, fill=raca)) +
+  #geom_bar(position="stack")
+  geom_bar(position=position_dodge())
+
+
+tmp %>%
+  ggplot(aes(x = situacao, y = after_stat(count), fill = raca)) +
+  #geom_density(aes(color=raca),alpha=0.2) + 
+  #geom_density(alpha = 0.2, position = "stack")
+  geom_density(alpha = 0.2) +
+  facet_grid(raca ~ .)
+
+
+tmp %>%
+  ggplot(aes(x = situacao, y = Fare)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+
+#+++++++++++++++++++++++++++++++++++++++++++
+params <- titanic %>%
+  filter(!is.na(Age)) %>%
+  summarize(mean = mean(Age), sd = sd(Age))
+
+titanic %>%
+  filter(!is.na(Age)) %>%
+  ggplot(aes(sample = Age)) +
+  geom_qq(dparams = params) +
+  geom_abline()
+
+#+++++++++++++++++++++++++++++++++++++++++++++
+titanic %>%
+  ggplot(aes(x = Survived, fill=Sex)) +
+  #geom_bar(position="stack")
+  geom_bar(position=position_dodge())
+
+titanic %>%
+  ggplot(aes(x = Survived)) +
+  #geom_bar(position="stack")
+  geom_bar(position=position_dodge())
+
+table(titanic$Survived)
+
+#+++++++++++++++++++++++++++++++++++++++++++
+titanic %>%
+  filter(!is.na(Age)) %>%
+  ggplot(aes(x = Age, y = after_stat(count), group=Survived, fill = Survived)) +
+  geom_density(aes(color=Survived),alpha=0.2)
+
+titanic %>%
+  ggplot(aes(Age, fill = Survived)) +
+  geom_density(alpha = 0.2) +
+  facet_grid(Survived ~ .)
+
+titanic %>%
+  ggplot(aes(Age, fill = Survived)) +
+  geom_density(alpha = 0.2)
+
+titanic %>%
+  ggplot(aes(Age, y = ..count.., fill = Survived)) +
+  geom_density(alpha = 0.2, position = "stack")
+
+#+++++++++++++++++++++++++++++++++++++++++++
+
+titanic %>%
+  filter(Fare >= 0) %>%
+  ggplot(aes(x = Survived, y = Fare)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2) + 
+  scale_y_continuous(trans="log2")
+
+
+#+++++++++++++++++++++++++++++++++++++++++++
+par(mfrow=c(1,3)) 
+
+p1 <- titanic %>%
+  ggplot(aes(x = Pclass, fill = Survived)) +
+  geom_bar()
+
+p2 <- titanic %>%
+  ggplot(aes(x = Pclass, fill = Survived)) +
+  geom_bar(position = position_fill())
+
+p3 <- titanic %>%
+  ggplot(aes(x = Survived, fill = Pclass)) +
+  geom_bar(position = position_fill())
+
+plot_grid(p1, p2, p3)
+
+
+#+++++++++++++++++++++++++++++++++++++++++++
+
+titanic %>%
+  filter(!is.na(Age)) %>%
+  ggplot(aes(x = Age, y = after_stat(count), group=Survived, fill = Survived)) +
+  geom_density(aes(color=Survived),alpha=0.2) +
+  facet_grid(.~Pclass+Sex)
+
+titanic %>%
+  filter(!is.na(Age)) %>%
+  ggplot(aes(x = Age, y = after_stat(count), group=Pclass, fill = Pclass)) +
+  geom_density(aes(color=Survived),alpha=0.2) +
+  facet_grid(~Sex)
+
+
+##########################
+#varImp
+#carrega o dataset
+var.imp <- read.csv("data/varImp.csv", sep = ";")
+var.imp <- var.imp %>% mutate(Var = substr(Var,1,23))
+
+par(mfrow = c(2, 2),
+    mar= c(3, 4, 1, 1) + 0.1)
+
+p1 <- var.imp %>% 
+  filter(Method == 'Step') %>%
+  ggplot(aes(x = reorder(Var, Log_Importance), y = Log_Importance)) +
+  geom_bar(stat = "identity")+
+  coord_flip()+
+  labs(x='Backward Stepwise', y="") +
+  theme(
+    axis.line = element_line(linewidth = 1, colour = "grey80"),
+    axis.text.x = element_text(angle=90, hjust=1),
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    legend.text = element_text(size = 10))
+
+p2 <- var.imp %>% 
+  filter(Method == 'CART') %>%
+  ggplot(aes(x = reorder(Var, Log_Importance), y = Log_Importance)) +
+  geom_bar(stat = "identity")+
+  coord_flip()+
+  labs(x='Árvore de Decisão', y="") +
+  theme(
+    axis.line = element_line(linewidth = 1, colour = "grey80"),
+    axis.text.x = element_text(angle=90, hjust=1),
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    legend.text = element_text(size = 10))
+
+p3 <- var.imp %>% 
+  filter(Method == 'RF') %>%
+  ggplot(aes(x = reorder(Var, Log_Importance), y = Log_Importance)) +
+  geom_bar(stat = "identity")+
+  coord_flip()+
+  labs(x='Random Forest', y="") +
+  theme(
+    axis.line = element_line(linewidth = 1, colour = "grey80"),
+    axis.text.x = element_text(angle=90, hjust=1),
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    legend.text = element_text(size = 10))
+
+p4 <- var.imp %>% 
+  filter(Method == 'Boruta') %>%
+  ggplot(aes(x = reorder(Var, Log_Importance), y = Log_Importance)) +
+  geom_bar(stat = "identity")+
+  coord_flip()+
+  labs(x='Boruta', y="") +
+  theme(
+    axis.line = element_line(linewidth = 1, colour = "grey80"),
+    axis.text.x = element_text(angle=90, hjust=1),
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    legend.text = element_text(size = 10))
+
+plot_grid(p1, p2, p3, p4)
+
+var.imp <- var.imp %>% group_by(Var) %>% mutate(tot.imp = log2(sum(Importance)))
+a <- var.imp %>% group_by(Var, Method, tot.imp) %>% reframe(count(Var)) %>% arrange(desc(tot.imp))
+print(a %>% distinct(Var, tot.imp),n=50)
+print(a,n=80)
+
+a %>% distinct(Var, tot.imp) %>%
+ggplot(aes(x = reorder(Var, tot.imp), y = tot.imp)) +
+geom_bar(stat = "identity")+
+coord_flip()+
+labs(x='Variável', y="Importância") +
+theme(
+  axis.line = element_line(linewidth = 1, colour = "grey80"),
+  axis.text.x = element_text(angle=90, hjust=1),
+  plot.background = element_rect(fill="white"),
+  panel.background = element_rect(fill="white"),
+  panel.grid.minor.y = element_line(color="grey80"),
+  legend.text = element_text(size = 10))
+
+a %>% distinct(Var, tot.imp) %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(Var, tot.imp), y = tot.imp), stat="identity", alpha=0.8, fill = "grey80") +
+  coord_flip()+
+  geom_text(aes(x=reorder(Var, tot.imp), y = tot.imp, label=(round(tot.imp, digits = 2))), size = 4, position = position_stack(vjust = 0.95)) +
+  labs(title="",x="Variável",y="Importância") +
+  theme(axis.line = element_line(linewidth = 1, colour = "grey80"),
+        axis.text.x = element_text(angle=90, hjust=1),
+        plot.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.grid.minor.y = element_line(color="grey80"),
+        legend.text = element_text(size = 10),
+        legend.position = c(0.5, -0.1), legend.box = "horizontal")
+
+
+#############BOX PLOT POR VARIÁVEL IMPORTANTE
+
+#carrega o dataset
+df <- read.csv("data/prepared_dataset2.csv", sep = ",")
+df <- df %>% dplyr::select(-X)
+tmp <- df %>% filter(!is.na(nota_entrada)) %>% mutate(nota_entrada = scales::rescale(nota_entrada))
+tmp$situacao <- apply(tmp,1,function(row){ 
+  if( !is.na(match(row['situacao'], c("CANCELADO", "TRANCADO"))) ){
+    return(as.factor("insucesso"))
+  }
+  return(as.factor("sucesso"))
+})
+table(tmp$situacao)
+#VARIÁVEIS IMPORTANTES
+vars <- c("situacao",
+          "qtd_trancamentos_curso",
+          "ispl",
+          "iech",
+          "periodo_atual",
+          "ch_total_integralizada",
+          "media_porc_frequencia",
+          "qtd_acompanhamentos_pedag",
+          "total_disc_reprovadas",
+          "numero_faltas",
+          "ch_sucesso_prim_semestre",
+          "nota_entrada",
+          "total_disc_abandonadas",
+          "total_faltas_primeiro_semestre",
+          "ch_insucesso_prim_semestre",
+          "idade_ingresso_curso",
+          "cobertura_aux_alimentacao")
+
+df <- df %>% select(all_of(vars))
+############
+
+df %>% ggplot(aes(qtd_trancamentos_curso)) +
+  geom_boxplot()
+
+ggplot(df, aes(x=situacao, y=qtd_trancamentos_curso, fill=situacao)) + 
+  geom_boxplot() +
+  facet_wrap(~situacao, scale="free")
+
+
+cols <- c("grey80", "orange")
+to_box_plot <- function(var){
+    p <- ggplot(df, aes_string(x="situacao", y=var, fill="situacao")) + 
+    geom_boxplot() +
+    stat_boxplot(geom = "errorbar", width = 0.25) + 
+    labs(x = var, y="") +
+    scale_fill_manual(values = cols) +
+    geom_boxplot(alpha = 0.8,          # Fill transparency
+                 colour = "#474747",   # Border color
+                 outlier.colour = 1) +  # Outlier color
+    theme(
+      plot.background = element_rect(fill="white"),
+      panel.background = element_rect(fill="white"),
+      panel.grid.minor.y = element_line(color="grey80"),
+      legend.text = element_text(size = 12), legend.position = "none")
+    
+    return(p)
+    
+}
+
+p1 <- to_box_plot("ira")
+p2 <- to_box_plot("ispl")
+p3 <- to_box_plot("media_notas")
+p4 <- to_box_plot("numero_faltas")
+p5 <- to_box_plot("ch_insucesso_prim_semestre")
+p6 <- to_box_plot("total_faltas_primeiro_semestre")
+
+par(mfrow=c(2,3)) 
+plot_grid(p1,p2,p3,p4,p5,p6)
+
+p1 <- to_box_plot("ira")
+p2 <- to_box_plot("ispl")
+
+
+#==========================
+
+#raca
+#baixa_renda_familiar
+#isprimeiraopcao
+#estrangeiro
+#pertence_grupoEtnico
+#sexo
+#egresso_escola_publica
+
+tmp <- read.csv("data/prepared_dataset.csv", sep = ",")
+
+tmp$baixa_renda_familiar <- as.factor(ifelse(tmp$baixa_renda_familiar == 1, "Sim", "Não"))
+tmp$pertence_grupo_etnico <- as.factor(ifelse(tmp$pertence_grupo_etnico == 1, "Sim", "Não"))
+tmp$is_primeira_opcao_curso <- as.factor(ifelse(tmp$is_primeira_opcao_curso == 1, "Sim", "Não"))
+tmp$estrangeiro <- as.factor(ifelse(tmp$estrangeiro == 1, "Sim", "Não"))
+tmp$sexo <- as.factor(ifelse(tmp$sexo == "M", "Masculino", "Feminino"))
+tmp$egresso_escola_publica <- as.factor(ifelse(tmp$egresso_escola_publica == 1, "Sim", "Não"))
+
+p1 <- tmp %>% ggplot(aes(x = baixa_renda_familiar, fill=situacao)) +
+  geom_bar() +
+  coord_flip() +
+  labs(y="", x="Baixa renda familiar?") +
+  scale_fill_manual(name = "Situacao", values = c("insucesso" = "orange", "sucesso" = "grey80"))+
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    panel.grid.minor.x = element_line(color="grey80"),
+    plot.margin = unit(c(0,0,1.5,1), "cm"),
+    legend.text = element_text(size = 10), legend.position = c(0.15, -0.15), legend.direction = "horizontal")
+
+p2 <- tmp %>% ggplot(aes(x = pertence_grupo_etnico, fill=situacao)) +
+  geom_bar() +
+  coord_flip() +
+  labs(y="", x="Pertence a grupo etnico?") +
+  scale_fill_manual(name = "Situacao", values = c("insucesso" = "orange", "sucesso" = "grey80"))+
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    panel.grid.minor.x = element_line(color="grey80"),
+    plot.margin = unit(c(0,0,1.5,1), "cm"),
+    legend.text = element_text(size = 10), legend.position = c(0.15, -0.15), legend.direction = "horizontal")
+
+p3 <- tmp %>% ggplot(aes(x = is_primeira_opcao_curso, fill=situacao)) +
+  geom_bar() +
+  coord_flip() +
+  labs(y="", x="Primeira opção de curso?") +
+  scale_fill_manual(name = "Situacao", values = c("insucesso" = "orange", "sucesso" = "grey80"))+
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    panel.grid.minor.x = element_line(color="grey80"),
+    plot.margin = unit(c(0,0,1.5,1), "cm"),
+    legend.text = element_text(size = 10), legend.position = c(0.15, -0.15), legend.direction = "horizontal")
+
+p4 <- tmp %>% ggplot(aes(x = estrangeiro, fill=situacao)) +
+  geom_bar() +
+  coord_flip() +
+  labs(y="", x="Estrangeiro?") +
+  scale_fill_manual(name = "Situacao", values = c("insucesso" = "orange", "sucesso" = "grey80"))+
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    panel.grid.minor.x = element_line(color="grey80"),
+    plot.margin = unit(c(0,0,1.5,1), "cm"),
+    legend.text = element_text(size = 10), legend.position = c(0.15, -0.15), legend.direction = "horizontal")
+
+par(mfrow=c(2,2)) 
+plot_grid(p1,p2,p3,p4)
+
+p5 <- tmp %>% ggplot(aes(x = sexo, fill=situacao)) +
+  geom_bar() +
+  coord_flip() +
+  labs(y="", x="Sexo") +
+  scale_fill_manual(name = "Situacao", values = c("insucesso" = "orange", "sucesso" = "grey80"))+
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    panel.grid.minor.x = element_line(color="grey80"),
+    plot.margin = unit(c(0,0,1.5,1), "cm"),
+    legend.text = element_text(size = 10), legend.position = c(0.15, -0.15), legend.direction = "horizontal")
+
+p6 <- tmp %>% select(raca, situacao) %>%
+  group_by(raca, situacao) %>%
+  summarise(t = n()) %>%
+  ggplot(aes(x = reorder(raca,t), y=t, fill=situacao)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(y="", x="Raca") +
+  scale_fill_manual(name = "Situacao", values = c("insucesso" = "orange", "sucesso" = "grey80"))+
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    panel.grid.minor.x = element_line(color="grey80"),
+    plot.margin = unit(c(0,0,1.5,1), "cm"),
+    legend.text = element_text(size = 10), legend.position = c(0.15, -0.15), legend.direction = "horizontal")
+
+par(mfrow=c(1,2)) 
+plot_grid(p5,p6)
+
+aux <- tmp %>% select(forma_ingresso, situacao) %>%
+  group_by(forma_ingresso, situacao) %>%
+  summarise(t = n())
+
+aux %>%
+  ggplot(aes(x = reorder(forma_ingresso,t), y=t, fill=situacao)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(y="", x="Forma Ingresso") +
+  scale_fill_manual(name = "Situacao", values = c("insucesso" = "orange", "sucesso" = "grey80"))+
+  theme(
+    plot.background = element_rect(fill="white"),
+    panel.background = element_rect(fill="white"),
+    panel.grid.minor.y = element_line(color="grey80"),
+    panel.grid.minor.x = element_line(color="grey80"),
+    plot.margin = unit(c(0,0,1.5,1), "cm"),
+    legend.text = element_text(size = 10), legend.position = c(0.15, -0.15), legend.direction = "horizontal")
+
+table(tmp$estrangeiro,tmp$situacao)
+table(tmp$baixa_renda_familiar,tmp$situacao)[2] / table(tmp$baixa_renda_familiar,tmp$situacao)[1]
+table(tmp$baixa_renda_familiar,tmp$situacao)[4] / table(tmp$baixa_renda_familiar,tmp$situacao)[3]
+
+cols <- c("grey80", "orange")
+to_box_plot <- function(var){
+  p <- ggplot(tmp, aes_string(x="situacao", y=var, fill="situacao")) + 
+    geom_boxplot() +
+    stat_boxplot(geom = "errorbar", width = 0.25) + 
+    labs(x = var, y="") +
+    scale_fill_manual(values = cols) +
+    geom_boxplot(alpha = 0.8,          # Fill transparency
+                 colour = "#474747",   # Border color
+                 outlier.colour = 1) +  # Outlier color
+    theme(
+      plot.background = element_rect(fill="white"),
+      panel.background = element_rect(fill="white"),
+      panel.grid.minor.y = element_line(color="grey80"),
+      legend.text = element_text(size = 12), legend.position = "none")
+  
+  return(p)
+  
+}
+
+tmp <- tmp %>% filter(tempo_ensino_medio_e_ingresso <= 100)
+
+p1 <- to_box_plot("total_faltas_primeiro_semestre")
+p2 <- to_box_plot("ch_insucesso_prim_semestre")
+p3 <- to_box_plot("ordem_class_proc_seletivo")
+p4 <- to_box_plot("tempo_ensino_medio_e_ingresso")
+#p5 <- to_box_plot("nota_entrada")
+
+par(mfrow=c(1,4)) 
+plot_grid(p1,p2,p3,p4)
+
+p1 <- to_box_plot("ira")
+p2 <- to_box_plot("ispl")
+
+
+
+p1 <- to_box_plot("ispl")
+p2 <- to_box_plot("qtd_trancamentos_curso")
+p3 <- to_box_plot("periodo_atual")
+p4 <- to_box_plot("qtd_acompanhamentos_pedag")
+p5 <- to_box_plot("ch_total_integralizada")
+p3 <- to_box_plot("iech")
+p6 <- to_box_plot("media_porc_frequencia")
+p11 <- to_box_plot("nota_entrada")
+p9 <- to_box_plot("numero_faltas")
+p8 <- to_box_plot("total_disc_reprovadas")
+p10 <- to_box_plot("ch_sucesso_prim_semestre")
+p12 <- to_box_plot("total_disc_abandonadas")
+p14 <- to_box_plot("ch_insucesso_prim_semestre")
+p13 <- to_box_plot("total_faltas_primeiro_semestre")
+p16 <- to_box_plot("cobertura_aux_alimentacao")
+p15 <- to_box_plot("idade_ingresso_curso")
+
+
+par(mfrow=c(4,4)) 
+plot_grid(p1,p2,p3,p4,
+          p5,p6,p7,p8,
+          p9,p10,p11,p12,
+          p13,p14,p15,p16)
+
+
+labels = c( "qtd_trancamentos_curso","ispl","iech","periodo_atual",
+            "ch_total_integralizada","media_porc_frequencia","qtd_acompanhamentos_pedag","total_disc_reprovadas",
+            "numero_faltas","ch_sucesso_prim_semestre","nota_entrada","total_disc_abandonadas",
+            "total_faltas_primeiro_semestre","ch_insucesso_prim_semestre","idade_ingresso_curso","cobertura_aux_alimentacao"),
+label_size = 9, hjust = 0, label_y = 0, label_x = 0.01, vjust = -0.5
+
+
+#================
+aux <- tmp %>% select(curso, situacao) %>% group_by(curso, situacao) %>% summarise(n=n())
+aux <- pivot_wider(aux, id_cols = c("curso"), names_from = "situacao", values_from = "n")
+
+table(tmp$situacao)
+2475/4853
+143/4853
+1255/4853
+
+
+tmp %>% filter(estrangeiro == 0) %>% group_by(situacao) %>% summarise_at(vars(nota_entrada), list(mean))
+

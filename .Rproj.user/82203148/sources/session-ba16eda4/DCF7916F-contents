@@ -1,0 +1,167 @@
+###########################################
+#       LOAD DATA
+###########################################
+#carrega o dataset
+dataset <- read.csv("data/dataset.csv", sep = ",")
+dataset <- dataset %>% dplyr::select(-X)
+
+tmp <- dataset
+
+#table(tmp$situacao)
+
+###########################################
+#       MISSING VALUES
+###########################################
+#remover alunos de 2023 que ainda não consolidaram
+tmp <- tmp %>% filter(ano_ingresso != 2023)
+#remover registros sem nota de entrada
+tmp <- tmp %>% filter(!is.na(nota_entrada))
+
+missings <- as.data.frame(apply(tmp, MARGIN = 2, function(x) sum(is.na(x))))
+
+#VARIÁVIES CUJA AUSÊNCIA REPRESENTA ZERO
+#numero_faltas 331 - ok
+#media_notas 332 - ok
+#media_porc_frequencia 331 - ok
+#total_faltas_primeiro_semestre 340 - ok
+#total_disc_aprovadas 1344 - ok
+#total_disc_reprovadas 1404 - ok
+#carga_horaria_sucesso_primeiro_semestre 1448 - ok
+#carga_horaria_insucesso_primeiro_semestre 2325 - ok
+
+#seta a média para 
+tmp$tempo_ensino_medio_e_ingresso[is.na(tmp$tempo_ensino_medio_e_ingresso)] <- round(median(tmp$tempo_ensino_medio_e_ingresso, na.rm = TRUE),digits=0)
+tmp[sapply(tmp, is.infinite)] <- NA
+#atualiza com zero variáveis quantitativas de contagem
+tmp[is.na(tmp)] <- 0
+colSums(is.na(tmp))
+sum(sapply(tmp, is.infinite))
+missings <- as.data.frame(apply(tmp, MARGIN = 2, function(x) sum(is.na(x))))
+
+###########################################
+#       TRATAMENTO DE OUTLIERS's
+###########################################
+
+# VARIÁVEIS DO TIPO NÚMERO
+vars <- c("idade_ingresso_curso","qtd_trancamentos","periodo_atual","ch_total_integralizada","tempo_ensino_medio_e_ingresso",
+          "nota_entrada","ordem_classificacao_processo_seletivo","carga_horaria_sucesso_primeiro_semestre",
+          "carga_horaria_insucesso_primeiro_semestre","total_faltas_primeiro_semestre","mc","ira","mcn","iech","iepl","ispl","iechp",
+          "projetos_ensino","projetos_extensao","projetos_pesquisa","projetos_monitoria","total_projetos",
+          "meses_alimentacao","meses_transporte","meses_moradia","atendimento_social","atendimento_psicologico","atendimento_medico","total_atendimentos",
+          "apr_inf_66_porc","cur_mais_25_porc_liv_opt","nao_integr_lim_max","nao_integr_lim_min","repr_mesmo_comp","repr_mais_de_um_comp",
+          "repr_freq_mais_um_comp","total_acompanhamentos","total_disc_aprovadas","total_disc_reprovadas","total_disc_abandonadas",
+          "total_disc_trancadas","media_notas","numero_faltas","media_porc_frequencia")
+
+scale_outliers <- function(var){
+  q1 <- quantile(tmp[[var]], probs=0.25, names=FALSE)
+  q3 <- quantile(tmp[[var]], probs=0.75, names=FALSE)
+  iqr = q3-q1
+  upper_boundary <- q3 + 1.5 * iqr
+  lower_boundary <- q1 - 1.5 * iqr
+  total_outliers <- length(tmp[[var]]) - length(tmp[[var]][between(tmp[[var]], lower_boundary, upper_boundary)])
+  tmp[var][tmp[var] > upper_boundary] <<- NA
+  tmp[var][tmp[var] < lower_boundary] <<- NA
+  #tmp[var][is.na(tmp[var])] <<- round(mean(tmp[[var]], na.rm = TRUE),digits=0)
+  cat(paste("\n\n VAR: ", var, 
+            "\n Q1: ", q1, 
+            "\n Q3: ", q3, 
+            "\n Limits: ", lower_boundary, " to ",  upper_boundary,
+            "\n Total outliers: ", total_outliers))
+}
+
+#for ( v in vars ){
+  #cat(paste(v,count(boxplot.stats(tmp[[v]])$out > 0)),"\n")
+#  scale_outliers(v)
+#}
+
+#>>>IDADE_INGRESSO_CURSO
+#boxplot(tmp$total_disc_trancadas)
+#mean(tmp$idade_ingresso_curso, trim=.95)
+#mean(tmp$idade_ingresso_curso)
+
+###########################################
+#   PROPORCIONALIZAR POR PERIODOS CURSADOS
+###########################################
+vars <- c("ch_total_integralizada",
+          "qtd_acompanhamentos_pedag",
+          "total_disc_reprovadas",
+          "total_disc_aprovadas",
+          "total_disc_trancadas",
+          "total_disc_abandonadas",
+          "numero_faltas",
+          "nota_entrada",
+          "cobertura_aux_alimentacao",
+          "cobertura_aux_transporte",
+          "cobertura_aux_moradia")
+
+
+for ( var in vars ){
+  print(var)
+  tmp[var] <- round(tmp[var] / as.numeric(tmp$periodo_atual), digits = 2)
+}
+
+#proporcionaliza meses benefícios assistência
+#tmp["meses_alimentacao"] <- round(tmp["meses_alimentacao"] / (tmp$periodo_atual * 6), digits = 0)
+#tmp["meses_transporte"] <- round(tmp["meses_transporte"] / (tmp$periodo_atual * 6), digits = 0)
+#tmp["meses_moradia"] <- round(tmp["meses_moradia"] / (tmp$periodo_atual * 6), digits = 0)
+
+###########################################
+#       SCALE
+###########################################
+tmp$nota_entrada <- scales::rescale(tmp$nota_entrada)
+
+###########################################
+#       DUMMIES
+###########################################
+
+tmp$is_primeira_opcao_curso <- as.factor(ifelse(tmp$is_primeira_opcao_curso == "true", 1, 0))
+tmp$egresso_escola_publica <- as.factor(ifelse(tmp$egresso_escola_publica == "true", 1, 0))
+tmp$baixa_renda_familiar <- as.factor(ifelse(tmp$baixa_renda_familiar == "true", 1, 0))
+tmp$pertence_grupo_etnico <- as.factor(ifelse(tmp$pertence_grupo_etnico == "true", 1, 0))
+tmp$estrangeiro <- as.factor(ifelse(tmp$estrangeiro == "true", 1, 0))
+tmp$sexo <- as.factor(ifelse(tmp$sexo == "M", 1, 0))
+
+aux <- tmp
+
+#count(is.na(tmp$cota))
+
+library(fastDummies)
+aux <- dummy_cols(tmp, select_columns = c("curso", "area_curso","raca","pais_origem","forma_ingresso","turno", "cota"),
+                  remove_first_dummy = TRUE)
+
+aux <- aux %>% select(everything(),
+                      -ano_ingresso,
+                      -curso,-area_curso,-raca,-pais_origem,
+                      -forma_ingresso,-turno,-cota)
+
+
+
+###########################################
+#       PADRONIZA A SITUAÇÃO
+###########################################
+aux$situacao <- apply(aux,1,function(row){ 
+  if( !is.na(match(row['situacao'], c("CANCELADO", "TRANCADO"))) ){
+    return(as.factor("insucesso"))
+  }
+  return(as.factor("sucesso"))
+})
+table(aux$situacao)
+
+###########################################
+#       GRAVA ARQUIVO FINAL
+###########################################
+############### write dataset csv ####################
+
+aux[sapply(aux, is.infinite)] <- NA
+sum(sapply(aux, is.infinite))
+sum(sapply(aux, is.na))
+aux[is.na(aux)] <- 0
+colSums(is.na(aux))
+
+aux <- aux %>% relocate(situacao)
+
+write.csv(aux, "data/prepared_dataset.csv", fileEncoding = "UTF-8")
+
+
+#dataset %>% group_by(situacao) %>% summarise(mean(total_acompanhamentos, na.rm = TRUE))
+#tmp %>% group_by(situacao) %>% summarise(mean(total_acompanhamentos, na.rm = TRUE))
